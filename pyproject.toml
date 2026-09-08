@@ -1,0 +1,34 @@
+[project]
+name = "scrape-queue"
+version = "0.1.0"
+description = "Queued scraping service: FastAPI control plane, Celery workers, Playwright when rendering is required."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "ysajang" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["scrapequeue*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: needs redis/postgres/minio containers",
+  "chaos: kills processes, run explicitly",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+strict = true
+python_version = "3.11"

@@ -1,0 +1,137 @@
+x-app: &app
+  build: .
+  env_file: .env
+  depends_on:
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+      required: true
+    minio:
+      condition: service_healthy
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  api:
+    <<: *app
+    command: uvicorn scrapequeue.api.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker-default:
+    <<: *app
+    command: celery -A scrapequeue.queue.celery_app worker -Q default,parse,export -c 4 --prefetch-multiplier 1 -n default@%h
+    stop_grace_period: 120s
+
+  worker-browser:
+    <<: *app
+    command: celery -A scrapequeue.queue.celery_app worker -Q browser -c 1 --prefetch-multiplier 1 -n browser@%h
+    stop_grace_period: 180s
+    shm_size: 1gb
+    tmpfs:
+      - /tmp
+      - /home/app/.cache
+
+  beat:
+    <<: *app
+    command: celery -A scrapequeue.queue.celery_app beat -S redbeat.RedBeatScheduler
+    stop_grace_period: 30s
+
+  migrate:
+    <<: *app
+    command: alembic upgrade head
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scrape
+      POSTGRES_PASSWORD: scrape
+      POSTGRES_DB: scrape
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scrape -d scrape"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flower:
+    image: mher/flower
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: ["observability"]
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./deploy/prometheus:/etc/prometheus:ro
+    ports:
+      - "9090:9090"
+    profiles: ["observability"]
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    profiles: ["observability"]
+
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.15.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    profiles: ["observability"]
+
+volumes:
+  redis-data:
+  pg-data:
+  minio-data:
