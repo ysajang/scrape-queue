@@ -1,0 +1,18 @@
+# Queue topology. Loaded by scrapequeue.queue.routing at import time.
+# priority: higher drains first when a worker consumes several queues.
+queues:
+  default:
+    priority: 5
+    description: HTTP fetch tasks and orchestration
+  browser:
+    priority: 3
+    description: Playwright tasks; isolated so one worker never mixes browser and HTTP load
+  parse:
+    priority: 7
+    description: pure-CPU row extraction from stored page snapshots
+  export:
+    priority: 8
+    description: CSV/JSON assembly and upload
+  dead_letter:
+    priority: 0
+    description: poison pills and exhausted retries, drained only by operators

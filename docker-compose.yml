@@ -1,6 +1,12 @@
 x-app: &app
   build: .
   env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://scrape:scrape@postgres:5432/scrape
+    REDIS_URL: redis://redis:6379/0
+    REDBEAT_REDIS_URL: redis://redis:6379/1
+    S3_ENDPOINT: http://minio:9000
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
   depends_on:
     redis:
       condition: service_healthy
@@ -30,7 +36,7 @@ services:
 
   worker-default:
     <<: *app
-    command: celery -A scrapequeue.queue.celery_app worker -Q default,parse,export -c 4 --prefetch-multiplier 1 -n default@%h
+    command: celery -A scrapequeue.queue.celery_app worker -Q export,parse,default -c 4 --prefetch-multiplier 1 -n default@%h
     stop_grace_period: 120s
 
   worker-browser:
@@ -55,6 +61,8 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -69,6 +77,8 @@ services:
       POSTGRES_USER: scrape
       POSTGRES_PASSWORD: scrape
       POSTGRES_DB: scrape
+    ports:
+      - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
     healthcheck:
@@ -84,6 +94,7 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio12345
     ports:
+      - "9000:9000"
       - "9001:9001"
     volumes:
       - minio-data:/data
