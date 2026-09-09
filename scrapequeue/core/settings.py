@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # --- auth: "key:scope,key:scope" ---
     api_keys: SecretStr = Field(default=SecretStr(""), alias="API_KEYS")
     api_rate_limit_per_minute: int = 60
+    webhook_secret: SecretStr = Field(default=SecretStr("change-me"), alias="WEBHOOK_SECRET")
 
     # --- data stores ---
     database_url: str = Field(alias="DATABASE_URL")

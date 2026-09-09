@@ -12,6 +12,7 @@ from celery.signals import worker_process_init, worker_ready, worker_shutdown
 
 from scrapequeue.core.settings import get_settings
 from scrapequeue.queue.routing import QUEUES, TASK_ROUTES
+from scrapequeue.schedule.loader import load_schedule
 
 settings = get_settings()
 
@@ -63,6 +64,7 @@ app.conf.update(
     redbeat_redis_url=settings.redbeat_redis_url,
     # Lock TTL; a second Beat instance waits for it instead of double-firing.
     redbeat_lock_timeout=60,
+    beat_schedule=load_schedule(),
     # --- retries (policy lives on the task; these are the shared defaults) ---
     task_default_retry_delay=settings.retry_backoff_base_seconds,
     task_annotations={"*": {"max_retries": settings.max_job_retries}},
@@ -71,8 +73,7 @@ app.conf.update(
 app.autodiscover_tasks(
     [
         "scrapequeue.pipeline.crawl",
-        "scrapequeue.pipeline.parse",
-        "scrapequeue.pipeline.dedupe",
+        "scrapequeue.schedule.beat",
         "scrapequeue.pipeline.export",
         "scrapequeue.queue.deadletter",
         "scrapequeue.api.routes.webhooks",

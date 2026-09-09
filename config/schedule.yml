@@ -1,0 +1,27 @@
+# Recurring jobs. Edit and restart beat; RedBeat stores the schedule in Redis
+# and holds a lock, so two beat processes will not double-fire an entry.
+schedules:
+  federal_register_daily:
+    enabled: true
+    cron: "15 6 * * *"          # 06:15 UTC daily
+    job:
+      target: federal_register
+      max_pages: 5
+      output_format: json
+      incremental: true
+
+  grants_browser_weekly:
+    enabled: true
+    cron: "30 5 * * 1"          # Mondays 05:30 UTC
+    job:
+      target: grants_browser
+      max_pages: 4
+      output_format: csv
+      incremental: true
+
+  grants_api_hourly:
+    enabled: false              # kept as an example of a paused entry
+    every_seconds: 3600
+    job:
+      target: grants_api
+      max_pages: 2

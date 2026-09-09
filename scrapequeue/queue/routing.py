@@ -42,9 +42,9 @@ def queues_for_worker(names: list[str], config: dict[str, dict[str, Any]] | None
 # Explicit routes. Fetcher type decides the queue at dispatch time (see
 # pipeline.crawl), so only the fixed-queue tasks are listed here.
 TASK_ROUTES: dict[str, dict[str, str]] = {
-    "scrapequeue.pipeline.parse.parse_page": {"queue": "parse"},
+    "scrapequeue.pipeline.crawl.assemble_job": {"queue": "export"},
     "scrapequeue.pipeline.export.export_job": {"queue": "export"},
-    "scrapequeue.pipeline.dedupe.dedupe_job": {"queue": "parse"},
+    "scrapequeue.api.routes.webhooks.deliver_callback": {"queue": "export"},
     "scrapequeue.queue.deadletter.park": {"queue": "dead_letter"},
 }
 
