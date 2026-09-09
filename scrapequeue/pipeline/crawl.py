@@ -16,13 +16,10 @@ chord callback does.
 from __future__ import annotations
 
 import json
-import random
 from typing import Any
 from uuid import UUID
 
 from celery import chord
-
-from scrapequeue.queue.celery_app import app as celery_app
 from celery.exceptions import SoftTimeLimitExceeded, WorkerLostError
 
 from scrapequeue.api.deps import get_redis
@@ -33,6 +30,7 @@ from scrapequeue.db import repo
 from scrapequeue.db.session import session_scope
 from scrapequeue.observability import metrics
 from scrapequeue.observability.logging import get_logger, job_id_var
+from scrapequeue.queue.celery_app import app as celery_app
 from scrapequeue.queue.checkpoint import pages_to_fetch
 from scrapequeue.queue.circuit import CircuitOpen
 from scrapequeue.storage import s3
@@ -105,7 +103,9 @@ def crawl_job(self: Any, job_id: str) -> dict[str, Any]:
     spec = load_target(spec_name)
     queue = "browser" if spec.fetcher == "browser" else "default"
     header = [
-        fetch_page.signature(kwargs={"job_id": job_id, "page": page, "base_url": base_url}, queue=queue)
+        fetch_page.signature(
+            kwargs={"job_id": job_id, "page": page, "base_url": base_url}, queue=queue
+        )
         for page in pending
     ]
     chord(header)(assemble_job.signature(args=[job_id], queue="export"))
@@ -162,7 +162,9 @@ def fetch_page(self: Any, job_id: str, page: int, base_url: str | None = None) -
         fetcher.close()
 
     key = page_key(job_id, page)
-    s3.put_bytes(key, json.dumps(result.rows, ensure_ascii=False).encode("utf-8"), "application/json")
+    s3.put_bytes(
+        key, json.dumps(result.rows, ensure_ascii=False).encode("utf-8"), "application/json"
+    )
 
     with session_scope() as session:
         inserted = repo.record_page(

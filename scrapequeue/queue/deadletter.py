@@ -10,13 +10,12 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from scrapequeue.queue.celery_app import app as celery_app
-
 from scrapequeue.core.states import JobState
 from scrapequeue.db import repo
 from scrapequeue.db.session import session_scope
 from scrapequeue.observability import metrics
 from scrapequeue.observability.logging import get_logger
+from scrapequeue.queue.celery_app import app as celery_app
 
 log = get_logger(__name__)
 

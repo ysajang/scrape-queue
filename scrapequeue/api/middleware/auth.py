@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from fastapi import Depends, Header, HTTPException, status
@@ -45,7 +46,7 @@ def current_principal(
     return _authenticate(x_api_key, get_settings())
 
 
-def require_scope(required: Scope):  # noqa: ANN201 - FastAPI dependency factory
+def require_scope(required: Scope) -> Callable[..., Principal]:
     def dependency(principal: Principal = Depends(current_principal)) -> Principal:
         if not principal.allows(required):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"scope {required} required")

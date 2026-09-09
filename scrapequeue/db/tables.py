@@ -77,16 +77,14 @@ class Job(Base):
     error: Mapped[str | None] = mapped_column(Text, default=None)
 
     # --- timestamps ---
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
-    pages: Mapped[list["JobPage"]] = relationship(back_populates="job", cascade="all, delete-orphan")
+    pages: Mapped[list[JobPage]] = relationship(back_populates="job", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index(

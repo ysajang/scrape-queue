@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from redis import Redis
 
 # KEYS[1] bucket hash, ARGV: rate, capacity, now, requested
+# noqa comment kept off the string so the script body stays byte-exact
 _TOKEN_BUCKET_LUA = """
 local key = KEYS[1]
 local rate = tonumber(ARGV[1])
@@ -65,7 +66,12 @@ class TokenBucket:
         self._script = redis.register_script(_TOKEN_BUCKET_LUA)
 
     def consume(
-        self, name: str, *, rate_per_second: float, capacity: float | None = None, tokens: float = 1.0
+        self,
+        name: str,
+        *,
+        rate_per_second: float,
+        capacity: float | None = None,
+        tokens: float = 1.0,
     ) -> Decision:
         cap = capacity if capacity is not None else max(rate_per_second, 1.0)
         allowed, wait = self._script(

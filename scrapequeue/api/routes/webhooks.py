@@ -15,12 +15,12 @@ import time
 from typing import Any
 
 import httpx
-from scrapequeue.queue.celery_app import app as celery_app
 from fastapi import APIRouter
 
 from scrapequeue.core.settings import get_settings
 from scrapequeue.observability import metrics
 from scrapequeue.observability.logging import get_logger
+from scrapequeue.queue.celery_app import app as celery_app
 
 router = APIRouter(tags=["webhooks"])
 log = get_logger(__name__)
@@ -48,7 +48,9 @@ def deliver_callback(self: Any, job_id: str, url: str, state: str, rows: int) ->
     headers = {
         "Content-Type": "application/json",
         "X-Scrapequeue-Timestamp": timestamp,
-        "X-Scrapequeue-Signature": sign(settings.webhook_secret.get_secret_value(), timestamp, body),
+        "X-Scrapequeue-Signature": sign(
+            settings.webhook_secret.get_secret_value(), timestamp, body
+        ),
     }
     try:
         response = httpx.post(url, content=body, headers=headers, timeout=10.0)

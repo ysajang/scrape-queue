@@ -29,7 +29,7 @@ def _resolve(host: str) -> list[str]:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror as exc:
         raise BlockedURL(f"cannot resolve host: {host}") from exc
-    return sorted({info[4][0] for info in infos})
+    return sorted({str(info[4][0]) for info in infos})
 
 
 def assert_public_address(host: str) -> None:

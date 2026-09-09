@@ -11,8 +11,12 @@ import threading
 
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
-JOBS_SUBMITTED = Counter("sq_jobs_submitted_total", "Jobs accepted by the API", ["target", "fetcher"])
-JOBS_FINISHED = Counter("sq_jobs_finished_total", "Jobs reaching a terminal state", ["target", "state"])
+JOBS_SUBMITTED = Counter(
+    "sq_jobs_submitted_total", "Jobs accepted by the API", ["target", "fetcher"]
+)
+JOBS_FINISHED = Counter(
+    "sq_jobs_finished_total", "Jobs reaching a terminal state", ["target", "state"]
+)
 JOB_DURATION = Histogram(
     "sq_job_duration_seconds",
     "Wall time from first task start to terminal state",
@@ -37,7 +41,9 @@ RATE_LIMIT_WAIT = Histogram(
     buckets=(0.01, 0.1, 0.5, 1, 2, 5, 10),
 )
 DEAD_LETTERS = Counter("sq_dead_letters_total", "Jobs parked for an operator", ["reason"])
-DRIFT_SUSPECTS = Counter("sq_drift_suspects_total", "Runs rejected by the drift detector", ["target"])
+DRIFT_SUSPECTS = Counter(
+    "sq_drift_suspects_total", "Runs rejected by the drift detector", ["target"]
+)
 BROWSER_RSS = Gauge("sq_browser_rss_bytes", "Resident memory of the browser process", ["worker"])
 WEBHOOK_ATTEMPTS = Counter("sq_webhook_attempts_total", "Callback deliveries", ["outcome"])
 

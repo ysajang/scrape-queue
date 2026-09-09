@@ -75,7 +75,9 @@ class Settings(BaseSettings):
     drift_min_ratio: float = 0.5
 
     # --- observability ---
-    otel_exporter_otlp_endpoint: str | None = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+    otel_exporter_otlp_endpoint: str | None = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
     metrics_port: int = 9464
 
     def api_key_scopes(self) -> dict[str, Scope]:
@@ -91,4 +93,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

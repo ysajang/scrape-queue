@@ -56,7 +56,8 @@ class PageResult:
 
 
 def _robots_allows(url: str, user_agent: str) -> bool:
-    from scrapekit.robots import RobotsDisallowed, assert_allowed as robots_assert
+    from scrapekit.robots import RobotsDisallowed
+    from scrapekit.robots import assert_allowed as robots_assert
 
     try:
         robots_assert(url, user_agent)

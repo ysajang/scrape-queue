@@ -8,10 +8,10 @@ slow site can never occupy an API worker.
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from scrapequeue.api.routes import health, jobs, results
@@ -42,7 +42,9 @@ app = FastAPI(
 
 
 @app.middleware("http")
-async def request_context(request: Request, call_next):  # noqa: ANN001, ANN201
+async def request_context(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex
     token = request_id_var.set(rid)
     try:

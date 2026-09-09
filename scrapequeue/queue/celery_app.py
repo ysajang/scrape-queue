@@ -76,6 +76,7 @@ app.autodiscover_tasks(
         "scrapequeue.schedule.beat",
         "scrapequeue.pipeline.export",
         "scrapequeue.queue.deadletter",
+        "scrapequeue.queue.selftest",
         "scrapequeue.api.routes.webhooks",
     ],
     force=True,

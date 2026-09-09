@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 _configured = False
 
 
-def configure_tracing(settings: "Settings", service_name: str) -> None:
+def configure_tracing(settings: Settings, service_name: str) -> None:
     global _configured
     if _configured or not settings.otel_exporter_otlp_endpoint:
         return
@@ -40,7 +40,7 @@ def configure_tracing(settings: "Settings", service_name: str) -> None:
     from opentelemetry.instrumentation.celery import CeleryInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
-    CeleryInstrumentor().instrument()
+    CeleryInstrumentor().instrument()  # type: ignore[no-untyped-call]
     SQLAlchemyInstrumentor().instrument()
     _configured = True
 
@@ -50,5 +50,5 @@ def instrument_fastapi(app: Any) -> None:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         FastAPIInstrumentor.instrument_app(app, excluded_urls="healthz,readyz,metrics")
-    except Exception:
+    except Exception:  # noqa: S110 - instrumentation is optional, the app still serves
         pass

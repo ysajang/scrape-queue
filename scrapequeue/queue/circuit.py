@@ -12,6 +12,7 @@ State lives in Redis so every worker sees the same circuit.
 from __future__ import annotations
 
 from enum import IntEnum
+from typing import cast
 from urllib.parse import urlparse
 
 from redis import Redis
@@ -53,14 +54,14 @@ class CircuitBreaker:
 
     def state(self, domain: str) -> tuple[CircuitState, int]:
         _, open_key, probe_key = self._keys(domain)
-        ttl = self._redis.ttl(open_key)
-        if ttl is None or ttl < 0:
+        ttl = int(cast(int, self._redis.ttl(open_key)))
+        if ttl < 0:
             return CircuitState.CLOSED, 0
         # One probe per open window: the first caller to claim the probe key
         # gets through, everyone else keeps seeing OPEN.
         if self._redis.set(probe_key, "1", nx=True, ex=max(ttl, 1)):
-            return CircuitState.HALF_OPEN, int(ttl)
-        return CircuitState.OPEN, int(ttl)
+            return CircuitState.HALF_OPEN, ttl
+        return CircuitState.OPEN, ttl
 
     def assert_closed(self, url: str) -> CircuitState:
         domain = domain_of(url)
@@ -77,7 +78,7 @@ class CircuitBreaker:
     def record_failure(self, url: str) -> CircuitState:
         domain = domain_of(url)
         fails_key, open_key, _ = self._keys(domain)
-        fails = int(self._redis.incr(fails_key))
+        fails = int(cast(int, self._redis.incr(fails_key)))
         self._redis.expire(fails_key, self._open_seconds)
         if fails >= self._threshold:
             self._redis.set(open_key, "1", ex=self._open_seconds)

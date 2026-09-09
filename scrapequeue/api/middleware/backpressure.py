@@ -8,6 +8,8 @@ its own backlog, where it belongs.
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import HTTPException, status
 from redis import Redis
 
@@ -16,7 +18,7 @@ from scrapequeue.core.settings import get_settings
 
 def queue_depth(redis: Redis, queue: str) -> int:
     """Redis transport stores each queue as a list keyed by the queue name."""
-    return int(redis.llen(queue))
+    return int(cast(int, redis.llen(queue)))
 
 
 def assert_capacity(redis: Redis, queue: str) -> int:

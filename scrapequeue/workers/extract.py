@@ -28,7 +28,7 @@ def columns(spec: TargetSpec) -> list[str]:
 def rows_from_html(html: str, spec: TargetSpec, page_url: str) -> list[Row]:
     from lxml import html as lxml_html
 
-    tree = lxml_html.fromstring(html)
+    tree: Any = lxml_html.fromstring(html)
     out: list[Row] = []
     for node in tree.cssselect(spec.extraction.row_selector):
         row: Row = {}

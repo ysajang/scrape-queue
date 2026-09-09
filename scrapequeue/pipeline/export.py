@@ -8,8 +8,7 @@ import json
 from typing import Any
 from uuid import UUID
 
-from scrapequeue.queue.celery_app import app as celery_app
-
+from scrapequeue.core.settings import get_settings
 from scrapequeue.core.states import JobState
 from scrapequeue.core.targets import load_target
 from scrapequeue.db import repo
@@ -18,6 +17,7 @@ from scrapequeue.observability import metrics
 from scrapequeue.observability.logging import get_logger
 from scrapequeue.pipeline import dedupe as dedupe_mod
 from scrapequeue.pipeline import drift
+from scrapequeue.queue.celery_app import app as celery_app
 from scrapequeue.storage import s3
 from scrapequeue.workers.extract import columns
 
@@ -30,7 +30,8 @@ def _load_rows(job_id: UUID, page_results: list[dict[str, Any]]) -> list[dict[st
         key = result.get("key")
         if not key:
             continue
-        body = s3.get_client().get_object(Bucket=s3.get_settings().s3_bucket, Key=key)["Body"].read()
+        bucket = get_settings().s3_bucket
+        body = s3.get_client().get_object(Bucket=bucket, Key=key)["Body"].read()
         rows.extend(json.loads(body))
     return rows
 
@@ -84,9 +85,7 @@ def finalise_job(job_uuid: UUID, page_results: list[dict[str, Any]]) -> dict[str
     header = columns(spec)
     payload = to_csv(emitted, header) if output_format == "csv" else to_json(emitted)
     key = f"jobs/{job_uuid}/result.{output_format}"
-    size = s3.put_bytes(
-        key, payload, "text/csv" if output_format == "csv" else "application/json"
-    )
+    size = s3.put_bytes(key, payload, "text/csv" if output_format == "csv" else "application/json")
 
     if verdict.suspect:
         state = JobState.SUSPECT

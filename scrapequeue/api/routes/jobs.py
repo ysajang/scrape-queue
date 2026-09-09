@@ -35,10 +35,10 @@ def _to_read(job: Job) -> JobRead:
         id=job.id,
         state=JobState(job.state),
         target=job.target,
-        fetcher=job.fetcher,  # type: ignore[arg-type]
+        fetcher=job.fetcher,
         start_url=job.start_url,
         max_pages=job.max_pages,
-        output_format=job.output_format,  # type: ignore[arg-type]
+        output_format=job.output_format,
         incremental=job.incremental,
         progress=PageProgress(
             pages_total=job.pages_total,
@@ -70,7 +70,9 @@ def submit_job(
     try:
         spec = load_target(payload.target)
     except UnknownTarget:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown target: {payload.target}") from None
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"unknown target: {payload.target}"
+        ) from None
 
     fetcher = payload.fetcher or spec.fetcher
     start_url = str(payload.start_url or spec.start_url)
@@ -175,7 +177,11 @@ def list_failures(
     ).scalars()
     return [
         FailedPageOut(
-            page=r.page, url=r.url, attempts=r.attempts, error=r.error, last_attempt_at=r.last_attempt_at
+            page=r.page,
+            url=r.url,
+            attempts=r.attempts,
+            error=r.error,
+            last_attempt_at=r.last_attempt_at,
         )
         for r in rows
     ]
@@ -213,7 +219,9 @@ def retry_job(
         callback_url=old.callback_url,
     )
     queue = "browser" if old.fetcher == "browser" else "default"
-    celery_app.send_task(CRAWL_TASK, kwargs={"job_id": str(new.id)}, queue=queue, task_id=str(new.id))
+    celery_app.send_task(
+        CRAWL_TASK, kwargs={"job_id": str(new.id)}, queue=queue, task_id=str(new.id)
+    )
     new.celery_task_id = str(new.id)
     db.flush()
     log.info("job.retried", job_id=str(new.id), retry_of=str(old.id))

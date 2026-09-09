@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import MutableMapping
 from contextvars import ContextVar
 from typing import Any
 
@@ -18,7 +19,7 @@ request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 job_id_var: ContextVar[str | None] = ContextVar("job_id", default=None)
 
 
-def _add_context(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+def _add_context(_: Any, __: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
     if rid := request_id_var.get():
         event_dict.setdefault("request_id", rid)
     if jid := job_id_var.get():
@@ -26,7 +27,7 @@ def _add_context(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     return event_dict
 
 
-def _add_trace(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+def _add_trace(_: Any, __: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
     try:
         from opentelemetry import trace
 
@@ -35,7 +36,7 @@ def _add_trace(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
         if ctx.is_valid:
             event_dict.setdefault("trace_id", format(ctx.trace_id, "032x"))
             event_dict.setdefault("span_id", format(ctx.span_id, "016x"))
-    except Exception:  # tracing is optional; never break a log line over it
+    except Exception:  # noqa: S110 - tracing is optional; a log line must never fail
         pass
     return event_dict
 

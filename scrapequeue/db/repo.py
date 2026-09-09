@@ -16,7 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from scrapequeue.core.states import JobState, PageState, TERMINAL_STATES, assert_transition
+from scrapequeue.core.states import TERMINAL_STATES, JobState, PageState, assert_transition
 from scrapequeue.db.tables import DeadLetter, FailedPage, Job, JobPage
 
 
@@ -34,7 +34,7 @@ def find_by_idempotency_key(session: Session, api_key_id: str, key: str) -> Job 
 
 
 def create_job(session: Session, **fields: object) -> Job:
-    job = Job(**fields)  # type: ignore[arg-type]
+    job = Job(**fields)
     session.add(job)
     session.flush()
     return job
@@ -121,9 +121,7 @@ def record_failed_page(
         )
     )
     session.execute(stmt)
-    session.execute(
-        update(Job).where(Job.id == job_id).values(pages_failed=Job.pages_failed + 1)
-    )
+    session.execute(update(Job).where(Job.id == job_id).values(pages_failed=Job.pages_failed + 1))
 
 
 def completed_pages(session: Session, job_id: UUID) -> set[int]:

@@ -70,13 +70,26 @@ addopts = "-m 'not integration and not chaos'"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [".v", ".venv", "scrapequeue/db/migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "N", "ASYNC"]
-per-file-ignores = { "tests/*" = ["S101", "S105", "S106"] }
+# N818 wants every exception to end in Error. These names read better at the
+# call site (raise BlockedURL(...)), and the rule is style, not correctness.
+ignore = [
+    "N818",  # exception names read better without the Error suffix here
+    "B008",  # FastAPI dependencies are declared in argument defaults by design
+]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "S603", "S607", "ANN"]
+"scrapequeue/queue/ratelimit.py" = ["S105"]  # the Lua source is not a credential
+
 
 [tool.mypy]
 strict = true
+# Celery's decorators are untyped, so every task would be reported as untyped.
+# The rest of strict mode still applies to the task bodies.
+disallow_untyped_decorators = false
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
 

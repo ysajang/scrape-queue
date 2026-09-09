@@ -8,6 +8,7 @@ difference.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from playwright.sync_api import Route
@@ -31,7 +32,7 @@ class RequestCounts:
     blocked_types: dict[str, int] = field(default_factory=dict)
 
 
-def make_route_filter(counts: RequestCounts):  # noqa: ANN201 - playwright handler
+def make_route_filter(counts: RequestCounts) -> Callable[[Route], None]:
     def handler(route: Route) -> None:
         request = route.request
         blocked_as = None

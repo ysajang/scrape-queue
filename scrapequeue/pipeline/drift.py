@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from scrapequeue.core.settings import get_settings

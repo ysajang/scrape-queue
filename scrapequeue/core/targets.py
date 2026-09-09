@@ -36,7 +36,8 @@ class Extraction(BaseModel):
         default_factory=dict, description="column name -> 'selector@attr'"
     )
     row_key: list[str] = Field(
-        default_factory=list, description="columns forming the stable identity used by incremental runs"
+        default_factory=list,
+        description="columns forming the stable identity used by incremental runs",
     )
 
 
