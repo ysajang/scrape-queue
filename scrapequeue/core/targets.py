@@ -47,6 +47,7 @@ class TargetSpec(BaseModel):
     description: str = ""
     start_url: HttpUrl
     fetcher: Literal["http", "browser"] = "http"
+    method: Literal["GET", "POST"] = "GET"
     # Documented reason the fetcher is what it is; printed in the README table
     # so nobody reaches for a browser when an HTTP request would do.
     fetcher_reason: str = ""

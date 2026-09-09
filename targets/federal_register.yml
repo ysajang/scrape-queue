@@ -1,0 +1,27 @@
+name: federal_register
+description: >
+  Documents published in the Federal Register, from the public JSON API. This
+  is the plain-HTTP target: page-addressable, no rendering, and the fastest of
+  the three, which is the point of keeping it next to the browser target.
+start_url: https://www.federalregister.gov/api/v1/documents.json
+fetcher: http
+fetcher_reason: Public JSON API; the HTML search paths are disallowed by robots.txt.
+respect_robots: true
+rate_per_second: 2.0
+pagination:
+  kind: query_param
+  param: page
+  start: 1
+  step: 1
+extraction:
+  row_selector: "results"
+  fields:
+    document_number: "document_number"
+    title: "title"
+    type: "type"
+    publication_date: "publication_date"
+    html_url: "html_url"
+  row_key: ["document_number"]
+params:
+  per_page: 20
+  order: newest

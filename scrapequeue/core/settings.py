@@ -57,9 +57,17 @@ class Settings(BaseSettings):
 
     # --- scraping guards ---
     allowed_target_hosts: list[str] = Field(
-        default_factory=lambda: ["www.grants.gov", "api.grants.gov", "catalog.data.gov"]
+        default_factory=lambda: [
+            "simpler.grants.gov",
+            "api.grants.gov",
+            "www.federalregister.gov",
+        ]
     )
     default_domain_rate_per_sec: float = 1.0
+    # Only for environments behind a TLS-intercepting proxy. Off by default:
+    # silently accepting any certificate is not something a scraper should do
+    # unless an operator has decided it must.
+    browser_ignore_https_errors: bool = False
     circuit_failure_threshold: int = 5
     circuit_open_seconds: int = 300
     # Drift: a page yielding fewer rows than baseline * ratio marks the job SUSPECT.
