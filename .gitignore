@@ -11,3 +11,4 @@ data/
 *.har
 !tests/fixtures/har/*.har
 .env
+*.egg-info/

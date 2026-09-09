@@ -1,0 +1,24 @@
+name: grants_api
+description: >
+  The same dataset as grants_browser, fetched from the public JSON API. Kept
+  side by side on purpose: the README compares cost and throughput of the two
+  paths, and the honest recommendation is to use this one when an API exists.
+start_url: https://api.grants.gov/v1/api/search2
+fetcher: http
+fetcher_reason: Public JSON endpoint, no rendering required.
+respect_robots: true
+rate_per_second: 2.0
+pagination:
+  kind: offset
+  param: startRecordNum
+  start: 0
+  step: 25
+extraction:
+  row_selector: "$.data.oppHits[*]"
+  fields:
+    opportunity_number: "$.number"
+    title: "$.title"
+    agency: "$.agencyCode"
+    posted_date: "$.openDate"
+    close_date: "$.closeDate"
+  row_key: ["opportunity_number"]

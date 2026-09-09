@@ -1,0 +1,30 @@
+name: grants_browser
+description: >
+  Federal grant opportunities from grants.gov search results. The page is a
+  Nuxt application: the server response contains no result rows, so this spec
+  exists to demonstrate the case where a real browser is the only option.
+start_url: https://www.grants.gov/search-grants
+fetcher: browser
+fetcher_reason: >
+  Rows are rendered client-side after an XHR; curl on the same URL returns zero
+  result elements.
+respect_robots: true
+rate_per_second: 0.5
+wait_for_selector: "table tbody tr"
+pagination:
+  kind: query_param
+  param: page
+  start: 1
+  step: 1
+extraction:
+  row_selector: "table tbody tr"
+  fields:
+    opportunity_number: "td:nth-child(1)"
+    title: "td:nth-child(2)"
+    agency: "td:nth-child(3)"
+    posted_date: "td:nth-child(4)"
+    close_date: "td:nth-child(5)"
+  attributes:
+    detail_url: "td:nth-child(2) a@href"
+  row_key: ["opportunity_number"]
+api_alternative: https://api.grants.gov/v1/api/search2

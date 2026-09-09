@@ -1,0 +1,23 @@
+name: datagov_catalog
+description: >
+  Dataset listing from catalog.data.gov. Server-rendered, so the HTTP fetcher
+  handles it; used as the counterexample to the browser path.
+start_url: https://catalog.data.gov/dataset
+fetcher: http
+fetcher_reason: Result rows are present in the initial HTML response.
+respect_robots: true
+rate_per_second: 0.1
+pagination:
+  kind: query_param
+  param: page
+  start: 1
+  step: 1
+extraction:
+  row_selector: ".dataset-item"
+  fields:
+    title: ".dataset-heading a"
+    organization: ".dataset-organization"
+    notes: ".notes"
+  attributes:
+    detail_url: ".dataset-heading a@href"
+  row_key: ["detail_url"]
