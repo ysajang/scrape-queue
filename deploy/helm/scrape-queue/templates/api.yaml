@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels: {app: {{ .Release.Name }}-api}
+  template:
+    metadata:
+      labels: {app: {{ .Release.Name }}-api}
+    spec:
+      {{- include "scrape-queue.podSecurity" . | nindent 6 }}
+      containers:
+        - name: api
+          image: {{ include "scrape-queue.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["uvicorn", "scrapequeue.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports: [{containerPort: 8000, name: http}]
+          envFrom:
+            - secretRef: {name: {{ .Values.existingSecret }}}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          # Liveness checks the process only: a database blip must not cause a
+          # restart storm. Readiness checks dependencies and pulls the pod out
+          # of the service instead.
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+          resources: {{ toYaml .Values.api.resources | nindent 12 }}
+          {{- include "scrape-queue.containerSecurity" . | nindent 10 }}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  selector: {app: {{ .Release.Name }}-api}
+  ports: [{port: 80, targetPort: http, name: http}]

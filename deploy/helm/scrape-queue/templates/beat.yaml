@@ -1,0 +1,26 @@
+{{- if .Values.beat.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-beat
+spec:
+  # One replica by intent, but RedBeat's lock means a second one during a
+  # rolling deploy waits instead of double-firing the schedule.
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: {{ .Release.Name }}-beat}
+  template:
+    metadata:
+      labels: {app: {{ .Release.Name }}-beat}
+    spec:
+      {{- include "scrape-queue.podSecurity" . | nindent 6 }}
+      containers:
+        - name: beat
+          image: {{ include "scrape-queue.image" . }}
+          args: ["celery", "-A", "scrapequeue.queue.celery_app", "beat", "-S", "redbeat.RedBeatScheduler"]
+          envFrom: [{secretRef: {name: {{ .Values.existingSecret }}}}]
+          {{- include "scrape-queue.containerSecurity" . | nindent 10 }}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]
+{{- end }}

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker-default
+spec:
+  replicas: {{ .Values.workerDefault.minReplicas }}
+  selector:
+    matchLabels: {app: {{ .Release.Name }}-worker-default}
+  template:
+    metadata:
+      labels: {app: {{ .Release.Name }}-worker-default}
+    spec:
+      {{- include "scrape-queue.podSecurity" . | nindent 6 }}
+      # Must exceed the soft time limit so a rolling deploy lets in-flight
+      # pages finish instead of relying on redelivery, which on the Redis
+      # transport takes about 100 seconds (ADR 7).
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "scrape-queue.image" . }}
+          args:
+            - celery
+            - -A
+            - scrapequeue.queue.celery_app
+            - worker
+            - -Q
+            - export,parse,default
+            - -c
+            - {{ .Values.workerDefault.concurrency | quote }}
+            - --prefetch-multiplier
+            - "1"
+          envFrom: [{secretRef: {name: {{ .Values.existingSecret }}}}]
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          resources: {{ toYaml .Values.workerDefault.resources | nindent 12 }}
+          {{- include "scrape-queue.containerSecurity" . | nindent 10 }}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]

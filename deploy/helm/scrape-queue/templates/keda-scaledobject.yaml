@@ -1,0 +1,38 @@
+{{- if .Values.keda.enabled }}
+# Scale on queue depth, not CPU. A worker waiting on a rate-limit token or a
+# slow page uses almost no CPU, so CPU-based autoscaling would sit at minimum
+# replicas while the backlog grows.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-worker-default
+spec:
+  scaleTargetRef: {name: {{ .Release.Name }}-worker-default}
+  minReplicaCount: {{ .Values.workerDefault.minReplicas }}
+  maxReplicaCount: {{ .Values.workerDefault.maxReplicas }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: redis
+      metadata:
+        address: {{ .Values.keda.redisAddress }}
+        listName: default
+        listLength: {{ .Values.workerDefault.queueLength | quote }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-worker-browser
+spec:
+  scaleTargetRef: {name: {{ .Release.Name }}-worker-browser}
+  minReplicaCount: {{ .Values.workerBrowser.minReplicas }}
+  maxReplicaCount: {{ .Values.workerBrowser.maxReplicas }}
+  # Long cooldown: a browser pod costs a second of startup and a gigabyte of
+  # RAM, so flapping is more expensive than staying up a while longer.
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: redis
+      metadata:
+        address: {{ .Values.keda.redisAddress }}
+        listName: browser
+        listLength: {{ .Values.workerBrowser.queueLength | quote }}
+{{- end }}

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker-browser
+spec:
+  replicas: {{ .Values.workerBrowser.minReplicas }}
+  selector:
+    matchLabels: {app: {{ .Release.Name }}-worker-browser}
+  template:
+    metadata:
+      labels: {app: {{ .Release.Name }}-worker-browser}
+    spec:
+      {{- include "scrape-queue.podSecurity" . | nindent 6 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "scrape-queue.image" . }}
+          args:
+            - celery
+            - -A
+            - scrapequeue.queue.celery_app
+            - worker
+            - -Q
+            - browser
+            - -c
+            - {{ .Values.workerBrowser.concurrency | quote }}
+            - --prefetch-multiplier
+            - "1"
+          envFrom: [{secretRef: {name: {{ .Values.existingSecret }}}}]
+          resources: {{ toYaml .Values.workerBrowser.resources | nindent 12 }}
+          {{- include "scrape-queue.containerSecurity" . | nindent 10 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            # Chromium crashes with the default 64 MB /dev/shm.
+            - {name: dshm, mountPath: /dev/shm}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+        - name: dshm
+          emptyDir: {medium: Memory, sizeLimit: 1Gi}

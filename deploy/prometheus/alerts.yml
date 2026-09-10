@@ -1,0 +1,49 @@
+groups:
+  - name: scrape-queue
+    rules:
+      - alert: QueueBacklogGrowing
+        expr: sq_queue_depth > 200
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.queue }} has been deep for ten minutes"
+          runbook: docs/runbook/queue-backlog.md
+
+      - alert: DomainCircuitOpen
+        expr: sq_circuit_state == 2
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Circuit open for {{ $labels.domain }}"
+          runbook: docs/runbook/domain-blocked.md
+
+      - alert: SelectorDriftSuspected
+        # Any drift suspect is worth waking up for: it means results are
+        # arriving that look successful but are probably empty.
+        expr: increase(sq_drift_suspects_total[1h]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "Possible selector drift on {{ $labels.target }}"
+          runbook: docs/runbook/selector-broken.md
+
+      - alert: JobsDeadLettered
+        expr: increase(sq_dead_letters_total[1h]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "Jobs parked in the dead-letter queue ({{ $labels.reason }})"
+
+      - alert: PageFailureRateHigh
+        expr: |
+          sum(rate(sq_page_failures_total[15m])) by (target)
+            / sum(rate(sq_pages_fetched_total[15m])) by (target) > 0.2
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than a fifth of pages failing for {{ $labels.target }}"
+
+      - alert: BrowserWorkerMemoryGrowing
+        expr: sq_browser_rss_bytes > 1.5e9
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Browser worker RSS above 1.5 GB, suspect a leaked context"

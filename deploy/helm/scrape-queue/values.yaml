@@ -1,0 +1,48 @@
+image:
+  repository: ghcr.io/ysajang/scrape-queue
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+api:
+  replicas: 2
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 512Mi}
+
+workerDefault:
+  minReplicas: 1
+  maxReplicas: 10
+  concurrency: 4
+  # KEDA adds a replica per this many queued messages.
+  queueLength: 20
+  resources:
+    requests: {cpu: 200m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+workerBrowser:
+  minReplicas: 0     # scale to zero: Chromium is expensive to keep idle
+  maxReplicas: 4
+  concurrency: 1
+  queueLength: 2
+  resources:
+    requests: {cpu: 500m, memory: 1Gi}
+    limits: {memory: 2Gi}
+
+beat:
+  enabled: true
+
+# Grace periods must exceed the soft time limit, otherwise a rolling deploy
+# kills tasks that were about to finish cleanly.
+terminationGracePeriodSeconds: 1800
+softTimeLimitSeconds: 1500
+
+env:
+  LOG_LEVEL: INFO
+  QUEUE_DEPTH_LIMIT: "500"
+
+existingSecret: scrape-queue-secrets   # DATABASE_URL, REDIS_URL, S3_*, API_KEYS, WEBHOOK_SECRET
+
+keda:
+  enabled: true
+  redisAddress: redis-master.default.svc.cluster.local:6379
+  cooldownPeriod: 300
