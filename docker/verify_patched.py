@@ -1,19 +1,32 @@
-"""Build-time assertion that no vulnerable copy of a patched package survived.
+"""Find, remove and then assert the absence of vulnerable package copies.
 
-Run inside the image build. It walks every directory on the interpreter path,
-not just the active distribution metadata, because the failure this catches is
-exactly a second copy sitting in a directory nobody was looking at.
+Two lessons are baked into this script.
+
+First, a container image can hold several copies of the same distribution in
+directories that are not on ``sys.path``: the Playwright base image carries the
+distribution's own ``dist-packages``, and ``pip install --prefix`` on Debian
+writes to a nested ``local/`` directory. A scanner reads every one of them, so
+walking ``sys.path`` is not enough. This walks the filesystem.
+
+Second, a purge that silently removes nothing looks identical to a purge that
+worked. Every path found is printed, and the build fails if a copy below the
+required version survives, so the build log says which directory it came from
+instead of leaving that to a scan two jobs later.
+
+    python3 verify_patched.py --purge     # remove old copies, then verify
+    python3 verify_patched.py             # verify only
 """
 
 from __future__ import annotations
 
 import re
-import site
+import shutil
 import sys
 from pathlib import Path
 
-MINIMUM = {"setuptools": (78, 1, 1), "msgpack": (1, 2, 1)}
-DIST_INFO = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+)-(?P<version>[0-9][^-]*)\.(dist|egg)-info$")
+MINIMUM: dict[str, tuple[int, ...]] = {"setuptools": (78, 1, 1), "msgpack": (1, 2, 1)}
+SKIP_DIRS = {"/proc", "/sys", "/dev", "/run", "/ms-playwright"}
+METADATA_DIR = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+)-(?P<version>[0-9][^-]*)\.(dist|egg)-info$")
 
 
 def parse(version: str) -> tuple[int, ...]:
@@ -26,34 +39,73 @@ def parse(version: str) -> tuple[int, ...]:
     return tuple(parts)
 
 
-def main() -> int:
-    directories = {Path(p) for p in [*site.getsitepackages(), *sys.path] if p and Path(p).is_dir()}
-    found: dict[str, list[str]] = {name: [] for name in MINIMUM}
-    failures: list[str] = []
-
-    for directory in sorted(directories):
-        for entry in directory.iterdir():
-            match = DIST_INFO.match(entry.name)
-            if not match:
+def walk(root: Path = Path("/")) -> list[tuple[str, str, Path]]:
+    """Return (name, version, metadata directory) for every copy on disk."""
+    found: list[tuple[str, str, Path]] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        if str(current) in SKIP_DIRS:
+            continue
+        try:
+            entries = list(current.iterdir())
+        except (PermissionError, OSError):
+            continue
+        for entry in entries:
+            if not entry.is_dir() or entry.is_symlink():
                 continue
-            name = match.group("name").replace("_", "-").lower()
-            if name not in MINIMUM:
+            # Packages vendor their own dependencies; those are not the copy
+            # an advisory is about and removing them breaks the parent.
+            if "/_vendor/" in f"{entry}/":
                 continue
-            version = match.group("version")
-            found[name].append(f"{version} in {directory}")
-            if parse(version) < MINIMUM[name]:
-                failures.append(f"{name} {version} found in {directory}")
+            match = METADATA_DIR.match(entry.name)
+            if match:
+                name = match.group("name").replace("_", "-").lower()
+                if name in MINIMUM:
+                    found.append((name, match.group("version"), entry))
+                continue
+            stack.append(entry)
+    return found
 
-    for name, sightings in found.items():
-        print(f"{name}: {', '.join(sightings) or 'not installed'}")
-        if not sightings:
-            failures.append(f"{name} is missing entirely; the purge removed too much")
 
-    if failures:
-        print("\nFAILED:", *failures, sep="\n  ")
+def purge(name: str, metadata_dir: Path) -> None:
+    parent = metadata_dir.parent
+    shutil.rmtree(metadata_dir, ignore_errors=True)
+    for sibling in (name, name.replace("-", "_")):
+        shutil.rmtree(parent / sibling, ignore_errors=True)
+    if name == "setuptools":
+        shutil.rmtree(parent / "pkg_resources", ignore_errors=True)
+
+
+def main(argv: list[str]) -> int:
+    should_purge = "--purge" in argv
+    removed: list[str] = []
+
+    for name, version, metadata_dir in sorted(walk(), key=lambda item: str(item[2])):
+        outdated = parse(version) < MINIMUM[name]
+        print(f"{'OLD ' if outdated else 'ok  '} {name} {version}  {metadata_dir.parent}")
+        if outdated and should_purge:
+            purge(name, metadata_dir)
+            removed.append(f"{name} {version} in {metadata_dir.parent}")
+
+    for line in removed:
+        print(f"removed {line}")
+
+    survivors = [
+        f"{name} {version} in {metadata_dir.parent}"
+        for name, version, metadata_dir in walk()
+        if parse(version) < MINIMUM[name]
+    ]
+    present = {name for name, _, _ in walk()}
+    missing = [name for name in MINIMUM if name not in present]
+
+    if survivors or missing:
+        print("\nFAILED:", *survivors, *(f"{n} is missing entirely" for n in missing), sep="\n  ")
         return 1
+
+    print("\nall copies are at or above the required versions")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

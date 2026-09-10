@@ -51,3 +51,21 @@ pytest -m chaos          # kills workers, ~2 minutes
   broker would serialise a snapshot that is stale by the time it is consumed.
 - New settings go in `core/settings.py` with a comment saying what failure the
   value prevents, not what the value is.
+
+## The image
+
+The application is installed into a virtualenv at `/opt/venv`, which is copied
+whole into the runtime stage. `pip install --prefix` was tried first and is the
+trap worth knowing about: on Debian it follows the `posix_local` scheme and
+writes to `<prefix>/local/lib/...`, so copying the tree onto `/usr/local`
+produces `/usr/local/local/lib/...`, a directory no interpreter looks in. The
+build now ends with an import smoke test so that mistake cannot ship again.
+
+`docker/verify_patched.py` runs during the build. It walks the filesystem for
+copies of packages with known advisories, removes the outdated ones and fails
+the build if any survive. Run it by hand inside a container to see where copies
+live:
+
+```bash
+docker run --rm scrape-queue:ci python3 /tmp/verify_patched.py
+```
