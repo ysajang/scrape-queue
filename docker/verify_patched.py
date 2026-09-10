@@ -77,9 +77,47 @@ def purge(name: str, metadata_dir: Path) -> None:
         shutil.rmtree(parent / "pkg_resources", ignore_errors=True)
 
 
+SBOM_PATTERNS = ("*.cdx.json", "*.spdx.json", "*.spdx", "*sbom*.json", "bom.json")
+
+
+def stale_sboms(root: Path = Path("/")) -> list[Path]:
+    """SBOM files baked into the base image.
+
+    Scanners trust an SBOM they find inside an image over what is on disk
+    (Trivy logs "Third-party SBOM may lead to inaccurate vulnerability
+    detection" when it does). After the packages it describes have been
+    upgraded, such a file is a stale claim and the source of findings that no
+    amount of purging fixes.
+    """
+    found: list[Path] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        if str(current) in SKIP_DIRS:
+            continue
+        try:
+            entries = list(current.iterdir())
+        except (PermissionError, OSError):
+            continue
+        for entry in entries:
+            if entry.is_symlink():
+                continue
+            if entry.is_dir():
+                stack.append(entry)
+            elif any(entry.match(pattern) for pattern in SBOM_PATTERNS):
+                found.append(entry)
+    return found
+
+
 def main(argv: list[str]) -> int:
     should_purge = "--purge" in argv
     removed: list[str] = []
+
+    for sbom in stale_sboms():
+        print(f"sbom {sbom}")
+        if should_purge:
+            sbom.unlink(missing_ok=True)
+            removed.append(f"stale SBOM {sbom}")
 
     for name, version, metadata_dir in sorted(walk(), key=lambda item: str(item[2])):
         outdated = parse(version) < MINIMUM[name]
