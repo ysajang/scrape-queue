@@ -25,10 +25,25 @@ RUN pip install --prefix=/install --upgrade "setuptools>=78.1.1" "wheel" \
  && pip install --prefix=/install .
 
 FROM base AS runtime
-# Patch the interpreter's own site-packages too: the base image's setuptools is
-# on PATH regardless of what the application venv contains.
-RUN pip install --no-cache-dir --upgrade "setuptools>=78.1.1"
 COPY --from=deps /install /usr/local
+
+# The base image keeps its own copies of setuptools and msgpack in the
+# distribution's dist-packages directory, which is where a scanner finds the
+# vulnerable versions no matter what the application environment holds
+# (setuptools CVE-2025-47273, msgpack GHSA-6v7p-g79w-8964). Remove every copy
+# on the interpreter's path, then install patched ones.
+RUN set -eux; \
+    for dir in $(python3 -c "import site; print(' '.join(site.getsitepackages()))"); do \
+      rm -rf "$dir"/setuptools "$dir"/setuptools-*.dist-info "$dir"/pkg_resources \
+             "$dir"/msgpack "$dir"/msgpack-*.dist-info "$dir"/msgpack-*.egg-info; \
+    done; \
+    python3 -m pip install --no-cache-dir --upgrade "setuptools>=78.1.1" "msgpack>=1.2.1"
+
+# Fail the build rather than the scan if an old copy survived: a version check
+# here names the problem, while a Trivy failure two jobs later does not say
+# which directory it came from.
+COPY docker/verify_patched.py /tmp/verify_patched.py
+RUN python3 /tmp/verify_patched.py && rm -f /tmp/verify_patched.py
 COPY scrapequeue ./scrapequeue
 COPY targets ./targets
 COPY config ./config
