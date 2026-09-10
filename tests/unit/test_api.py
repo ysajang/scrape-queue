@@ -8,12 +8,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from scrapequeue.api.app import app
-from scrapequeue.api.middleware.auth import Principal
+from scrapequeue.api.middleware.auth import Principal, current_principal
+from scrapequeue.api.middleware.ratelimit import enforce_api_rate_limit
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    """Auth, scopes and validation are exercised without a broker.
+
+    The rate limiter is the only dependency on this path that talks to Redis,
+    and it is covered on its own in test_ratelimit.py. Overriding it here keeps
+    these tests infrastructure-free, which is what makes them run on every push.
+    """
+    app.dependency_overrides[enforce_api_rate_limit] = current_principal
+    yield TestClient(app)
+    app.dependency_overrides.clear()
 
 
 def test_healthz_needs_no_auth(client):
