@@ -9,6 +9,10 @@ authors = [{ name = "ysajang" }]
 dependencies = [
     "scrape-kit @ git+https://github.com/ysajang/scrape-kit@c85776de7f665518c369758c0f416e341797dc95",
     "celery[redis]>=5.6,<6",
+    # kombu pins msgpack==1.1.2 in its optional extra; that release has an
+    # out-of-bounds read (GHSA-6v7p-g79w-8964). We do not use msgpack
+    # serialisation, but the package ends up in the image, so pin it forward.
+    "msgpack>=1.2.1",
     "celery-redbeat>=2.4,<3",
     "redis>=5.0,<6.5",
     "fastapi>=0.141,<1",

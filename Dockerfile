@@ -18,9 +18,16 @@ WORKDIR /app
 FROM base AS deps
 COPY pyproject.toml README.md ./
 COPY scrapequeue/__init__.py scrapequeue/__init__.py
-RUN pip install --prefix=/install .
+# The Playwright base image ships older build tooling than the current
+# advisories allow (setuptools CVE-2025-47273). Upgrading before the install
+# means the copy under /install is the patched one.
+RUN pip install --prefix=/install --upgrade "setuptools>=78.1.1" "wheel" \
+ && pip install --prefix=/install .
 
 FROM base AS runtime
+# Patch the interpreter's own site-packages too: the base image's setuptools is
+# on PATH regardless of what the application venv contains.
+RUN pip install --no-cache-dir --upgrade "setuptools>=78.1.1"
 COPY --from=deps /install /usr/local
 COPY scrapequeue ./scrapequeue
 COPY targets ./targets
