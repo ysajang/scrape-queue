@@ -10,9 +10,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH
 
-# git is needed only to resolve the scrape-kit VCS dependency.
+# git resolves the scrape-kit VCS dependency. python3-venv is not part of the
+# Playwright base image: it installs packages into the system interpreter, so
+# ensurepip is missing and `python3 -m venv` fails without it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git \
+ && apt-get install -y --no-install-recommends git python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
