@@ -69,3 +69,9 @@ live:
 ```bash
 docker run --rm scrape-queue:ci python3 /tmp/verify_patched.py
 ```
+
+## Releases
+
+Pushing a `v*` tag builds the image and publishes it to
+`ghcr.io/ysajang/scrape-queue` with the version, `major.minor` and `latest`
+tags. The Helm chart's default `image.repository` points there.
