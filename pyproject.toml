@@ -14,7 +14,7 @@ dependencies = [
     # serialisation, but the package ends up in the image, so pin it forward.
     "msgpack>=1.2.1",
     "celery-redbeat>=2.4,<3",
-    "redis>=5.0,<6.5",
+    "redis>=5.0,<8.2",
     "fastapi>=0.141,<1",
     "uvicorn[standard]>=0.52,<1",
     "pydantic>=2.13,<3",
