@@ -18,8 +18,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -31,15 +31,15 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
       - run: pip install -e ".[dev]"
       - name: Unit tests
         run: pytest --cov=scrapequeue --cov-report=term-missing --cov-fail-under=55
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage
@@ -76,8 +76,8 @@ jobs:
       API_KEYS: ci-read:read,ci-write:write,ci-admin:admin
       WEBHOOK_SECRET: ci-secret
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -110,7 +110,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The runtime image is built on the Playwright base and is several
       # gigabytes; Trivy exports it to a tarball to scan it, which fills the
       # runner's root volume. Free the preinstalled toolchains first and put
@@ -122,9 +122,9 @@ jobs:
                       /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
           sudo mkdir -p /mnt/tmp && sudo chmod 1777 /mnt/tmp
           df -h /
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
