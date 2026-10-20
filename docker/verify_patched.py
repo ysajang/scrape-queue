@@ -24,7 +24,11 @@ import shutil
 import sys
 from pathlib import Path
 
-MINIMUM: dict[str, tuple[int, ...]] = {"setuptools": (78, 1, 1), "msgpack": (1, 2, 1)}
+MINIMUM: dict[str, tuple[int, ...]] = {
+    "setuptools": (78, 1, 1),
+    "msgpack": (1, 2, 1),
+    "virtualenv": (21, 7, 13),
+}
 SKIP_DIRS = {"/proc", "/sys", "/dev", "/run", "/ms-playwright"}
 METADATA_DIR = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+)-(?P<version>[0-9][^-]*)\.(dist|egg)-info$")
 

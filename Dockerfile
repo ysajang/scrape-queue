@@ -13,7 +13,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # git resolves the scrape-kit VCS dependency. python3-venv is not part of the
 # Playwright base image: it installs packages into the system interpreter, so
 # ensurepip is missing and `python3 -m venv` fails without it.
+# The base image is a snapshot; upgrade its OS packages so security fixes
+# published since (openssl, for one) reach the image without waiting for a new
+# Playwright release.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends git python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
@@ -33,12 +37,13 @@ RUN python3 -m venv "$VIRTUAL_ENV" \
 FROM base AS runtime
 COPY --from=deps /opt/venv /opt/venv
 
-# The base image ships copies of two packages with current advisories
-# (setuptools CVE-2025-47273, msgpack GHSA-6v7p-g79w-8964) outside the venv.
-# Install patched versions, then remove every older copy left on disk: they sit
-# in directories that are on no sys.path, and a scanner reads all of them. The
-# build fails if one survives, so the log names the directory.
-RUN python3 -m pip install --no-cache-dir --upgrade "setuptools>=78.1.1" "msgpack>=1.2.1"
+# The base image ships copies of packages with current advisories outside the
+# venv (setuptools CVE-2025-47273, msgpack GHSA-6v7p-g79w-8964, virtualenv
+# CVE-2026-102925/102930/102937). Install patched versions, then remove every
+# older copy left on disk: they sit in directories that are on no sys.path, and
+# a scanner reads all of them. The build fails if one survives, so the log
+# names the directory.
+RUN python3 -m pip install --no-cache-dir --upgrade "setuptools>=78.1.1" "msgpack>=1.2.1" "virtualenv>=21.7.13"
 COPY docker/verify_patched.py /tmp/verify_patched.py
 RUN python3 /tmp/verify_patched.py --purge && rm -f /tmp/verify_patched.py
 

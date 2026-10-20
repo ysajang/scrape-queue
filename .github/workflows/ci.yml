@@ -130,6 +130,9 @@ jobs:
           push: false
           load: true
           tags: scrape-queue:ci
+          # The weekly run exists to catch drift, so it resolves dependencies
+          # fresh; a cached layer would keep shipping last month's packages.
+          no-cache: ${{ github.event_name == 'schedule' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan image
