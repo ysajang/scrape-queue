@@ -1,7 +1,7 @@
 # Playwright's official image ships Chromium and its system dependencies for
 # this exact Playwright version; pinning both together avoids the driver
 # mismatch that shows up at runtime as "Executable doesn't exist".
-FROM mcr.microsoft.com/playwright/python:v1.62.0-noble AS base
+FROM mcr.microsoft.com/playwright/python:v1.64.0-noble AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -60,6 +60,14 @@ RUN DATABASE_URL=postgresql+psycopg://u:p@db:5432/db \
     REDBEAT_REDIS_URL=redis://redis:6379/1 \
     S3_ENDPOINT=http://minio:9000 S3_BUCKET=b S3_ACCESS_KEY=k S3_SECRET_KEY=s \
     python -c "import scrapequeue.api.app, scrapequeue.queue.celery_app; print('imports ok')"
+
+# The playwright package must match the browsers baked into the base image
+# (pyproject pins it to the base tag). If they drift apart the driver looks for
+# a browser build that is not on disk, so fail here instead of at runtime.
+RUN python -c "import os; from playwright.sync_api import sync_playwright; \
+p = sync_playwright().start(); path = p.chromium.executable_path; p.stop(); \
+assert os.path.exists(path), 'Chromium for this playwright version is missing: ' + path; \
+print('chromium ok', path)"
 
 # Runs as the image's unprivileged user; compose mounts the root filesystem
 # read-only and provides /tmp and the browser cache as tmpfs.
