@@ -1,7 +1,7 @@
 # Playwright's official image ships Chromium and its system dependencies for
 # this exact Playwright version; pinning both together avoids the driver
 # mismatch that shows up at runtime as "Executable doesn't exist".
-FROM mcr.microsoft.com/playwright/python:v1.64.0-noble AS base
+FROM mcr.microsoft.com/playwright/python:v1.64.1-noble AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
