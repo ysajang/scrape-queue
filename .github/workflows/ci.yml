@@ -6,6 +6,7 @@ on:
   pull_request:
   schedule:
     - cron: "0 4 * * 1"   # weekly: catches selector drift on the live targets
+  workflow_call:          # release.yml runs the full suite before publishing
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
